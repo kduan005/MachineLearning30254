@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import datetime
 
 #create dataframes from raw datasets
-df_Alley = pd.read_csv("311_Service_Requests_-_Alley_Lights_Out_Sample.csv", error_bad_lines=False, index_col=False, dtype='unicode')
-df_Graffiti = pd.read_csv("311_Service_Requests_-_Graffiti_Removal_Sample.csv", error_bad_lines=False, index_col=False, dtype='unicode')
-df_Vacant = pd.read_csv("311_Service_Requests_-_Vacant_and_Abandoned_Buildings_Reported_Sample.csv", error_bad_lines=False, index_col=False, dtype='unicode')
+df_Alley = pd.read_csv("311_Service_Requests_-_Alley_Lights_Out.csv", error_bad_lines=False, index_col=False, dtype='unicode')
+df_Graffiti = pd.read_csv("311_Service_Requests_-_Graffiti_Removal.csv", error_bad_lines=False, index_col=False, dtype='unicode')
+df_Vacant = pd.read_csv("311_Service_Requests_-_Vacant_and_Abandoned_Buildings_Reported.csv", error_bad_lines=False, index_col=False, dtype='unicode')
 
 #extract attributes in interest
 df_Alley = df_Alley[["Creation Date", "Completion Date", "Type of Service Request", "Community Area", "ZIP Code"]]
