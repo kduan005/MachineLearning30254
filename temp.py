@@ -110,7 +110,7 @@ filter_Vacant))
 
 df_recent_month = df[filter]
 df_recent_month.dropna(subset = ["ZIP"])
-'''
+
 apikey = "5b9d4382502f66057d5e472188a11800148098ac"
 request_url = "http://citysdk.commerce.gov"
 
@@ -142,5 +142,3 @@ for row in df_recent_month["ZIP", "Year", "Type"].itertuples():
                                         "Education High Shool": education_high_school,\
                                         "Employment Employed": employment_employed},
                                         ignore_index = True)
-'''
-#https://geo.fcc.gov/api/census/block/find?latitude=42&longitude=-87&showall=false&format=json
