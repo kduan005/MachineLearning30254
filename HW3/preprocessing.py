@@ -3,22 +3,34 @@ import numpy as np
 import csv
 from sklearn import preprocessing
 
-def data_imputation(df, fill_type = None, vars_to_fill, value = None):
+def to_bools(df, vars_to_convert):
+    for var in vars_to_convert:
+        df[var] = df[var].astype(np.bool)
+
+def imputation(df, vars_to_fill, fill_type = None, value = None, \
+output = False):
     '''
     fill_type: including mean or zero
     vars_to_fill: list of strings, names of variables to imputate
-    value: allowing for manual input of value to be imputated. fill_type and\
-    value cannot have inputs at the same time
+    value_to_fill: allowing for manual input for value to be imputated. \
+    fill_type and value cannot have inputs at the same time
     '''
 
     for var in vars_to_fill:
-        if not value is None:
-        if fill_type == "mean":
-            values = df[var].mean()
-        if fill_type == "zero":
-            values = 0
-        df[var] = df[var].fillna(value = values)
+        if fill_type:
+            if fill_type == "mean":
+                value_to_fill = df[var].mean()
+            if fill_type == "zero":
+                value_to_fill = 0
+        else:
+            value_to_fill = value
+            df[var] = df[var].fillna(value_to_fill)
+            print ("Filling the missing values for {}".format(var))
 
+    if output:
+        df.to_csv("output/filled_missing.csv")
+
+#clustering is not implemented in PA3
 def clustering(df, vars):
     '''
     vars: vars usded for clustering, first being the index column, second dependent
@@ -80,8 +92,21 @@ def discretize(df, var, bins_no = 5, size = None, bound = None, method = "even_c
                     bins.append(bin_bound)
                     bin_bound += size
             df[discretized_var] = pd.cut(df[var], bins, include_lowest = True)
+
         else:
             df[discretized_var] = pd.cut(df[var], bins, include_lowest = True)
+
+def cat_to_dummy(df, vars_to_dummy, drop = True):
+
+    for var in vars_to_dummy:
+        dum_var = pd.get_dummies(df[var], var)
+        df = pd.merge(df, dum_var, left_index = True, right_index = True, \
+        how = "inner")
+
+    if drop:
+        df.drop(vars_to_dummy, inplace = True, axis = 1)
+
+    return df
 
 def normalize(df, var):
     '''
