@@ -14,6 +14,7 @@ from sklearn.grid_search import ParameterGrid, GridSearchCV
 from sklearn.metrics import *
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.metrics import precision_recall_curve
 import random
 import pylab as pl
 import matplotlib.pyplot as plt
@@ -209,34 +210,20 @@ def matric_at_k(y_true, y_pred_probs, k, matric_type):
 
     return matric
 
-def plot_precision_recall(y_true, y_pred_probs, model):
+def plot_precision_recall(y_test, y_score, model):
     '''
     plot the precision_recall_curve for different models
     '''
-    from sklearn.metrics import precision_recall_curve
+    precision, recall, _ = precision_recall_curve(y_test, y_score)
 
-    y_score = y_pred_probs
-    precision_curve, recall_curve, pr_thresholds = precision_recall_curve(y_true,\
-    y_score)
-    precision_curve = precision_curve[:-1]
-    recall_curve = recall_curve[:-1]
-    positive_pct_lst = []
-    number_scored = len(y_socre)
-    plt.figure()
-    for value in pr_thresholds:
-        positive_num = len(y_socre[y_score >= value])
-        positive_pct = positive_num / float(number_scored)
-        positive_pct_lst.append(positive_pct)
-    positive_pct_lst = np.array(positive_pct_lst)
-    plt.clf()
-    fig, ax1 = plt.subplots()
-    ax1.plot(positive_pct_lst, precision_curve, "b")
-    ax1.set_xlabel("percent of population")
-    ax1.set_ylabel("precision", color = "b")
-    ax2 = ax1.twinx()
-    ax2.plot(positive_pct_lst, recall_curve, "r")
-    ax2.set_ylabel("recall", color = "r")
+    plt.step(recall, precision, color='b', alpha=0.2,
+             where='post')
+    plt.fill_between(recall, precision, step='post', alpha=0.2,
+                     color='b')
 
-    plt.title(model + str("_precision_recall_curve"))
-    plt.savefig("evaluation/" + model +str("/precision_recall_curve"))
-    plt.close()
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(
+              average_precision))
