@@ -20,8 +20,8 @@ df_projects = df_projects[date_filter].copy()
 df = df_projects.join(df_outcomes)
 df = df.drop(["teacher_acctid", "schoolid", "school_ncesid", "school_latitude",\
  "school_longitude","school_city", "school_state", "school_district", \
- "school_county", "teacher_prefix", "date_posted"], axis = 1).copy()
-#print ("df.columns", df.columns, df.index.values)
+ "school_county", "teacher_prefix"], axis = 1).copy()
+#print (df.count())
 
 #convert categorical to numerical values
 categorical_vars_with_nan = ["school_metro", "primary_focus_subject", \
@@ -48,16 +48,18 @@ categorical_vars = ["school_metro", "school_charter", \
 
 #Split features and label
 X = df.drop(["fully_funded"], axis = 1).copy()
-print ("X.columns", X.columns, X.index.values)
+#print ("X.columns", X.columns, X.index.values)
 
 y = df[["fully_funded"]].copy()
 datapreprocessing.encode_label(y, ["fully_funded"])
 y = y.fully_funded.copy()
 
 #Split training and testing set
-split_date = pd.Timestamp(datetime(2012, 1, 1))
-X_y_sets = modeling.split_train_test(X, y, test_size = 0.25, temporal = False, split_date = None)
+splitdate = [pd.Timestamp(datetime(2012, 1, 1)), pd.Timestamp(datetime(2012, 6, 30))]
+X_y_sets = modeling.split_train_test(X, y, test_size = 0.25, temporal = True,\
+ temporal_var = "date_posted", split_date = splitdate)
 for i, X_y_set in enumerate(X_y_sets):
+    print (i)
     X_train, X_test, y_train, y_test = X_y_set
 
     #imputate data
@@ -74,6 +76,6 @@ for i, X_y_set in enumerate(X_y_sets):
     datapreprocessing.encode_label(X_test, categorical_vars)
 
     #Train models
-    classifiers, param_grid = modeling.classifiers_parameters(grid_type = "standard")
-    modeling.classifier_loop(["RF", "LR", "DT", "KNN", "NB", "AB", "BAG"], \
+    classifiers, param_grid = modeling.classifiers_parameters(grid_type = "test")
+    modeling.classifier_loop(["RF", "LR", "DT", "NB", "AB", "BAG", "KNN"], \
     classifiers, param_grid, X_train, X_test, y_train, y_test, output = True, loop_no = i)

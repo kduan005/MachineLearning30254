@@ -17,6 +17,7 @@ def encode_label(df, vars_to_encode):
         le.fit(df[var].unique().astype(str))
         new_column = pd.Series(le.transform(df[var].astype(str)), index = df.index.values)
         df[var] = new_column
+        print (var, df[var].unique(), list(le.inverse_transform(df[var].unique())))
         #print ("convert {} to numerical".format(var))
 
 def imputation(df, vars_to_fill, fill_type = None, value = None, \

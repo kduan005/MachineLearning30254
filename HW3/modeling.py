@@ -45,17 +45,17 @@ def classifiers_parameters(grid_type = "standard"):
         n_estimators = 5, max_samples = 0.65, max_features = 1)}
 
     standard_grid = {
-        "RF": {"n_estimators": [1, 10, 100], "max_depth":[1, 5, 10, 20, 50],\
-            "max_features": ["sqrt", "log2"], "min_samples_split": [2, 5, 10]},\
-        "LR": {"penalty": ["l1", "l2"], "C": [10 ** i for i in range(-3, 3)]},\
+        "RF": {"n_estimators": [1, 10], "max_depth":[1, 5],\
+            "max_features": ["sqrt", "log2"], "min_samples_split": [2, 20]},\
+        "LR": {"penalty": ["l1", "l2"], "C": [10 ** i for i in range(-2, 2)]},\
         "SVM": {"C": [10 ** i for i in range(-2,2)], "kernel": ["linear"]},\
-        "DT": {"criterion": ["gini", "entropy"], "max_depth": [1, 5, 10, 20, 50],\
-            "max_features":["sqrt", "log2"], "min_samples_split": [2, 5 ,10]},\
-        "KNN": {"n_neighbors": [1, 5, 10, 25], "weights": ["uniform", \
+        "DT": {"criterion": ["gini", "entropy"], "max_depth": [1, 10],\
+            "max_features":["sqrt", "log2"], "min_samples_split": [2, 10]},\
+        "KNN": {"n_neighbors": [5, 10], "weights": ["uniform", \
             "distance"], "algorithm": ["auto", "ball_tree", "kd_tree"]},\
         "NB": {},
         "AB": {"algorithm": ["SAMME", "SAMME.R"], "n_estimators": \
-            [10 ** i for i in range(0, 5)]},\
+            [10 ** i for i in range(0, 3)]},\
         "BAG": {"n_estimators": [5, 10, 20], "max_samples": [0.35, 0.5, 0.65]}
         }
 
@@ -79,21 +79,31 @@ def classifiers_parameters(grid_type = "standard"):
 
     return classifiers, param_grid
 
-def split_train_test(X, y, test_size = 0.25, temporal = False, split_date = None):
+def split_train_test(X, y, test_size = 0.25, temporal = False, temporal_var = None, \
+split_date = None):
+    '''
+    temporal: boolean, indicator for whether to employ temporal validation or not
+    temporal_var: string, name of the temporal feature
+    split_date: a list of Timestamps, listing multiple Timestamps for spliting \
+    training and testing sets
+    '''
     X_y_sets = []
     if temporal is False:
+        X = X.drop([temporal_var], axis = 1).copy()
+        #print ("drop temporal_var")
+        #print (X.columns)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = \
             test_size, random_state = 0)
         X_y_sets.append((X_train, X_test, y_train, y_test))
         #print (X_train.isnull().any())
     else:
-
+        '''
         tscv = TimeSeriesSplit(n_splits = nsplits)
         for train_index, test_index in tscv.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
             X_y_sets.append((X_train, X_test, y_train, y_test))
-
+        '''
         '''
         X_train = X[X["date_posted"] <= split_date].copy()
         print (X_train.columns)
@@ -104,6 +114,14 @@ def split_train_test(X, y, test_size = 0.25, temporal = False, split_date = None
         y_test = y[X_test.index.values].copy()
         X_y_sets.append((X_train, X_test, y_train, y_test))
         '''
+        for date in split_date:
+            X_train = X[X["date_posted"] <= date].copy()
+            X_train = X_train.drop([temporal_var], axis = 1).copy()
+            X_test = X[X["date_posted"] > date].copy()
+            X_test = X_test.drop([temporal_var], axis = 1).copy()
+            y_train = y[X["date_posted"] <= date].copy()
+            y_test = y[X["date_posted"] > date].copy()
+            X_y_sets.append((X_train, X_test, y_train, y_test))
     return X_y_sets
 
 def classifier_loop(models_of_interest, classifiers, param_grid, X_train, X_test,\
@@ -176,7 +194,7 @@ def classifier_loop(models_of_interest, classifiers, param_grid, X_train, X_test
                     scores["r_at_30"], scores["r_at_50"]]
                 if output:
                     plot_precision_recall(y_test, y_pred_probs, model_name, loop_no)
-            except IndexError as e:
+            except MemoryError as e:
                 print ("Error:", e)
                 continue
 
