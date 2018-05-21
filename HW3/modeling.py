@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn import preprocessing, cross_validation, svm, metrics, tree, decomposition
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, BaggingClassifier
 from sklearn.linear_model import LogisticRegression, Perceptron, SGDClassifier, \
-OrthogonalMatchingPursuit, RandomizedLogisticRegression
+    OrthogonalMatchingPursuit, RandomizedLogisticRegression
 from sklearn.neighbors.nearest_centroid import NearestCentroid
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
 from sklearn.tree import DecisionTreeClassifier
@@ -51,7 +51,7 @@ def classifiers_parameters(grid_type = "standard"):
         "SVM": {"C": [10 ** i for i in range(-2,2)], "kernel": ["linear"]},\
         "DT": {"criterion": ["gini", "entropy"], "max_depth": [1, 5, 10, 20, 50],\
             "max_features":["sqrt", "log2"], "min_samples_split": [2, 5 ,10]},\
-        "KNN": {"n_neighbors": [1, 5, 10, 25, 50, 100], "weights": ["uniform", \
+        "KNN": {"n_neighbors": [1, 5, 10, 25], "weights": ["uniform", \
             "distance"], "algorithm": ["auto", "ball_tree", "kd_tree"]},\
         "NB": {},
         "AB": {"algorithm": ["SAMME", "SAMME.R"], "n_estimators": \
@@ -67,6 +67,7 @@ def classifiers_parameters(grid_type = "standard"):
     	"DT": {"criterion": ["gini"], "max_depth": [1], "max_features": ["sqrt"],\
             "min_samples_split": [10]},\
         "KNN": {"n_neighbors": [5], "weights": ["uniform"], "algorithm": ["auto"]},\
+        "NB": {},\
         "AB": {"algorithm": ["SAMME"], "n_estimators": [1]},\
         "BAG": {"n_estimators": [5]}
         }
@@ -78,8 +79,35 @@ def classifiers_parameters(grid_type = "standard"):
 
     return classifiers, param_grid
 
-def classifier_loop(models_of_interest, classifiers, param_grid, X, y, test_size, \
-temporal = False, nsplits = None, output = True):
+def split_train_test(X, y, test_size = 0.25, temporal = False, split_date = None):
+    X_y_sets = []
+    if temporal is False:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = \
+            test_size, random_state = 0)
+        X_y_sets.append((X_train, X_test, y_train, y_test))
+        #print (X_train.isnull().any())
+    else:
+
+        tscv = TimeSeriesSplit(n_splits = nsplits)
+        for train_index, test_index in tscv.split(X):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+            X_y_sets.append((X_train, X_test, y_train, y_test))
+
+        '''
+        X_train = X[X["date_posted"] <= split_date].copy()
+        print (X_train.columns)
+        #X_train = X_train.drop(["date_posted"], axis = 1).copy()
+        X_test = X[X["date_posted"] <= split_date]
+        X_train = X_train.drop(["date_posted"], axis = 1).copy()
+        y_train = y[X_train.index.values].copy()
+        y_test = y[X_test.index.values].copy()
+        X_y_sets.append((X_train, X_test, y_train, y_test))
+        '''
+    return X_y_sets
+
+def classifier_loop(models_of_interest, classifiers, param_grid, X_train, X_test,\
+ y_train, y_test, output = True, loop_no = None):
     '''
     Inputs:
         models_of_interest:a list of strings, each string stands for a model of
@@ -92,61 +120,68 @@ temporal = False, nsplits = None, output = True):
         output: boolean, if output needed to be save to files or not
         temporal: boolean, indicator for temporal validation. If true, then user
         need to input n_split to indicate the number of splits
-        nsplits: integer, number of splits for temporal validation
     '''
 
     results_df = pd.DataFrame(columns = ("model_type", "classifier", "parameters",\
         "train_time", "test_time", "accuracy", "f1_score", "precision", "recall",\
-        "auc", "p_at_5", "p_at_10", "p_at_20", "r_at_5", "r_at_10", "r_at_20"))
+        "auc", "p_at_1", "p_at_2", "p_at_5", "p_at_10", "p_at_20", "p_at_30", \
+        "p_at_50", "r_at_1", "r_at_2", "r_at_5", "r_at_10", "r_at_20", "r_at_30", \
+        "r_at_50"))
+    #print (results_df.head())
 
-    if temporal is False:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = \
-            test_size, random_state = 0)
-    else:
-        tscv = TimeSeriesSplit(n_splits = nsplits)
-        for train_index, test_index in tscv.split(X):
-            X_train, X_test = X[train_index], X[test_index]
-            y_train, y_test = y[train_index], y[test_index]
+    for index, classifier in enumerate([classifiers[x] for x in models_of_interest]):
+        print (models_of_interest[index])
+        parameter_values = param_grid[models_of_interest[index]]
+        for p in ParameterGrid(parameter_values):
+            try:
+                classifier.set_params(**p)
+                print (classifier)
+                train_start = time.time()
+                classifier.fit(X_train, y_train)
+                train_end = time.time()
+                train_time = train_end - train_start
+                print("training done")
 
-            for index, classifier in enumerate([classifiers[x] for x in models_of_interest]):
-                print (models_of_interest[index])
-                parameter_values = param_grid[models_of_interest[index]]
-                for p in ParameterGrid(parameter_values):
-                    try:
-                        classifier.set_params(**p)
-                        print (classifier)
-                        train_start = time.time()
-                        classifier.fit(X_train, y_train)
-                        train_end = time.time()
-                        train_time = train_end - train_start
-                        print("training done")
+                test_start = time.time()
+                y_pred = classifier.predict(X_test)
+                test_end = time.time()
+                test_time = test_end - test_start
+                print("prediction done")
 
-                        test_start = time.time()
-                        y_pred = classifier.predict(X_test)
-                        test_end = time.time()
-                        test_time = test_end - test_start
-                        print("prediction done")
+                y_pred_probs = classifier.predict_proba(X_test)[:, 1]
+                print ("prediction_prob done")
+                scores = evaluate_matrics(y_test, y_pred, y_pred_probs)
+                print("evaluation done")
 
-                        y_pred_probs = classifier.predict_proba(X_test)[:, 1]
-                        print ("prediction_prob done")
-                        scores = evaluate_matrics(y_test, y_pred, y_pred_probs)
-                        print("evaluation done")
+                row_index = len(results_df)
+                model_name = models_of_interest[index] + str(row_index)
+                ''''
+                print ("model", models_of_interest[index], "classifier", classifier,\
+                    "p", p, "train time", train_time, "test time", test_time, "accuracy", scores["accuracy"], \
+                    "f1", scores["f1_score"], "precision", scores["precision"], \
+                    "p_at_1", scores["p_at_1"], "p_at_2", scores["p_at_2"], "p_at_5", scores["p_at_5"],\
+                    "p_at_10", scores["p_at_10"], "p_at_20", scores["p_at_20"], "p_at_30", scores["p_at_30"], \
+                    "p_at_50", scores["p_at_50"], "r_at_1", scores["r_at_1"], "r_at_2", scores["r_at_2"], \
+                    "r_at_5", scores["r_at_5"], "r_at_10", scores["r_at_10"], "r_at_20", scores["r_at_20"], \
+                    "r_at_30", scores["r_at_30"], "r_at_50", scores["r_at_50"])
+                '''
+                results_df.loc[row_index] = [models_of_interest[index], classifier,\
+                    p, train_time, test_time, scores["accuracy"], \
+                    scores["f1_score"], scores["precision"], \
+                    scores["recall"], scores["auc"], \
+                    scores["p_at_1"], scores["p_at_2"], scores["p_at_5"],\
+                    scores["p_at_10"], scores["p_at_20"], scores["p_at_30"], \
+                    scores["p_at_50"], scores["r_at_1"], scores["r_at_2"], \
+                    scores["r_at_5"], scores["r_at_10"], scores["r_at_20"], \
+                    scores["r_at_30"], scores["r_at_50"]]
+                if output:
+                    plot_precision_recall(y_test, y_pred_probs, model_name, loop_no)
+            except IndexError as e:
+                print ("Error:", e)
+                continue
 
-                        row_index = len(results_df)
-                        model_name = models_of_interest[index] + str(row_index)
-                        results_df.loc[row_index] = [models_to_run[index], classifier,\
-                            p, train_time, test_time, scores["accuracy"], \
-                            scores["f1_score"], scores["precision"], scores["p_at_5"],\
-                            scores["p_at_10"], scores["p_at_20"], scores["r_at_5"],\
-                            scores["r_at_10"], scores["r_at_20"]]
-
-                        if output:
-                            plot_precision_recall_n(y_test, y_pred_probs, model_name)
-                    except IndexError as e:
-                        print ("Error:", e)
-                        continue
     if output:
-        results_df.to_csv("evaluation/clf_evaluations.csv")
+        results_df.to_csv("evaluation/clf_evaluations_{}.csv".format(loop_no))
 
     return results_df
 
@@ -161,13 +196,13 @@ def evaluate_matrics(y_true, y_pred, y_pred_probs):
     evaluation_results = {}
 
     evaluation_metrics = {"accuracy": accuracy_score, "f1_score": f1_score, \
-    "precision": precison_score, "recall": recall_score, "auc": roc_auc_score}
+    "precision": precision_score, "recall": recall_score, "auc": roc_auc_score}
 
     for metric, fn in evaluation_metrics.items():
-        rv[metric] = fn(y_true, y_pred)
+        evaluation_results[metric] = fn(y_true, y_pred)
 
     y_pred_probs_sorted, y_true_sorted = zip(*sorted(zip(y_pred_probs, y_true),\
-    reserve = True))
+    reverse = True))
     levels = [1, 2, 5, 10, 20, 30, 50]
     for k in levels:
         evaluation_results["p_at_" + str(k)] = matric_at_k(y_true_sorted, \
@@ -176,6 +211,25 @@ def evaluate_matrics(y_true, y_pred, y_pred_probs):
         y_pred_probs_sorted, k, matric_type = "a")
 
     return evaluation_results
+
+def matric_at_k(y_true, y_pred_probs, k, matric_type):
+    '''
+    calculate precision/recall at different levels of population rate
+    Input:
+    k: integer, k percent rate treated with the intervention
+    matric_type: strings, has two values of "p" and "a", which stands for
+    precision and recall respectively
+    Output:
+    matric: float, either precision or recall at k level
+    '''
+
+    y_preds_at_k = prob_to_binary_at_k(y_pred_probs, k)
+    if matric_type == "p":
+        matric = precision_score(y_true, y_preds_at_k)
+    elif matric_type == "a":
+        matric = recall_score(y_true, y_preds_at_k)
+
+    return matric
 
 def prob_to_binary_at_k(y_pred_probs, k):
     '''
@@ -191,26 +245,7 @@ def prob_to_binary_at_k(y_pred_probs, k):
     y_pred_binary = [1 if x < cutoff else 0 for x in range(len(y_pred_probs))]
     return y_pred_binary
 
-def matric_at_k(y_true, y_pred_probs, k, matric_type):
-    '''
-    calculate precision/recall at different levels of population rate
-    Input:
-    k: integer, k percent rate treated with the intervention
-    matric_type: strings, has two values of "p" and "a", which stands for
-    precision and recall respectively
-    Output:
-    matric: float, either precision or recall at k level
-    '''
-
-    y_preds_at_k = prob_to_binary_at_k(y_pred_probs, k)
-    if matric_type == "p":
-        matric = precison_score(y_true, y_preds_at_k)
-    elif matric_type == "a":
-        matric = recall_score(y_true, y_preds_at_k)
-
-    return matric
-
-def plot_precision_recall(y_test, y_score, model):
+def plot_precision_recall(y_test, y_score, model, loop_no):
     '''
     plot the precision_recall_curve for different models
     '''
@@ -225,5 +260,6 @@ def plot_precision_recall(y_test, y_score, model):
     plt.ylabel('Precision')
     plt.ylim([0.0, 1.05])
     plt.xlim([0.0, 1.0])
-    plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(
-              average_precision))
+    plt.title('Precision-Recall curve/{}'.format(model))
+    plt.savefig('evaluation/'+ str(loop_no) + model)
+    print ("plot precision_recall_curve done")

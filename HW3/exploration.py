@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pandas.tools.plotting import scatter_matrix
-from preprocessing import *
+from datapreprocessing import *
 
 def read_data(path, index_col = None):
     df = pd.read_csv(path, index_col = index_col)
