@@ -17,8 +17,6 @@ def encode_label(df, vars_to_encode):
         le.fit(df[var].unique().astype(str))
         new_column = pd.Series(le.transform(df[var].astype(str)), index = df.index.values)
         df[var] = new_column
-        print (var, df[var].unique(), list(le.inverse_transform(df[var].unique())))
-        #print ("convert {} to numerical".format(var))
 
 def imputation(df, vars_to_fill, fill_type = None, value = None, \
 output = False):
@@ -40,7 +38,6 @@ output = False):
         else:
             value_to_fill = value
         df[var] = df[var].fillna(value_to_fill).copy()
-        #print ("Filling the missing values for {}".format(var))
 
     if output:
         df.to_csv("output/filled_missing.csv")
@@ -112,6 +109,10 @@ def discretize(df, var, bins_no = 5, size = None, bound = None, method = "even_c
             df[discretized_var] = pd.cut(df[var], bins, include_lowest = True)
 
 def cat_to_dummy(df, vars_to_dummy, drop = True):
+    '''
+    generate dummy variables from categorical variables
+    vars_to_dummy: a list of strings, names of the variables to convert
+    '''
 
     for var in vars_to_dummy:
         dum_var = pd.get_dummies(df[var], var)

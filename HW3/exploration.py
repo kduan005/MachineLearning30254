@@ -15,10 +15,9 @@ def plot_scatter(df, dep_var, ind_var):
     '''
     plt.scatter(df[dep_var], df[ind_var])
     plt.title('{} vs {}'.format(dep_var, ind_var))
-    plt.xlabel('{} coefficient'.format(ind_var)) # units unclear...
+    plt.xlabel('{} coefficient'.format(ind_var)) 
     plt.ylabel(dep_var)
     plt.show()
-    #plt.savefig("{} vs {}".format(dep_var, ind_var))
 
 def plot_scatter_matrix(df, vars):
     '''

@@ -21,9 +21,9 @@ df = df_projects.join(df_outcomes)
 df = df.drop(["teacher_acctid", "schoolid", "school_ncesid", "school_latitude",\
  "school_longitude","school_city", "school_state", "school_district", \
  "school_county", "teacher_prefix"], axis = 1).copy()
-#print (df.count())
 
-#convert categorical to numerical values
+#classify different categories of features, for converting categorical to
+#numerical values and imputation
 categorical_vars_with_nan = ["school_metro", "primary_focus_subject", \
 "primary_focus_area", "secondary_focus_subject", "secondary_focus_area", \
 "resource_type", "grade_level", \
@@ -46,9 +46,8 @@ categorical_vars = ["school_metro", "school_charter", \
 "three_or_more_non_teacher_referred_donors", \
 "one_non_teacher_referred_donor_giving_100_plus", "donation_from_thoughtful_donor"]
 
-#Split features and label
+#Extract features and label from df
 X = df.drop(["fully_funded"], axis = 1).copy()
-#print ("X.columns", X.columns, X.index.values)
 
 y = df[["fully_funded"]].copy()
 datapreprocessing.encode_label(y, ["fully_funded"])
@@ -58,8 +57,9 @@ y = y.fully_funded.copy()
 splitdate = [pd.Timestamp(datetime(2012, 1, 1)), pd.Timestamp(datetime(2012, 6, 30))]
 X_y_sets = modeling.split_train_test(X, y, test_size = 0.25, temporal = True,\
  temporal_var = "date_posted", split_date = splitdate)
+
 for i, X_y_set in enumerate(X_y_sets):
-    print (i)
+    print ("modeling with split date {}".format(splitdate[i]))
     X_train, X_test, y_train, y_test = X_y_set
 
     #imputate data

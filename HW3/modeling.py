@@ -90,30 +90,13 @@ split_date = None):
     X_y_sets = []
     if temporal is False:
         X = X.drop([temporal_var], axis = 1).copy()
-        #print ("drop temporal_var")
-        #print (X.columns)
+
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = \
             test_size, random_state = 0)
         X_y_sets.append((X_train, X_test, y_train, y_test))
-        #print (X_train.isnull().any())
+
     else:
-        '''
-        tscv = TimeSeriesSplit(n_splits = nsplits)
-        for train_index, test_index in tscv.split(X):
-            X_train, X_test = X[train_index], X[test_index]
-            y_train, y_test = y[train_index], y[test_index]
-            X_y_sets.append((X_train, X_test, y_train, y_test))
-        '''
-        '''
-        X_train = X[X["date_posted"] <= split_date].copy()
-        print (X_train.columns)
-        #X_train = X_train.drop(["date_posted"], axis = 1).copy()
-        X_test = X[X["date_posted"] <= split_date]
-        X_train = X_train.drop(["date_posted"], axis = 1).copy()
-        y_train = y[X_train.index.values].copy()
-        y_test = y[X_test.index.values].copy()
-        X_y_sets.append((X_train, X_test, y_train, y_test))
-        '''
+
         for date in split_date:
             X_train = X[X["date_posted"] <= date].copy()
             X_train = X_train.drop([temporal_var], axis = 1).copy()
@@ -145,7 +128,6 @@ def classifier_loop(models_of_interest, classifiers, param_grid, X_train, X_test
         "auc", "p_at_1", "p_at_2", "p_at_5", "p_at_10", "p_at_20", "p_at_30", \
         "p_at_50", "r_at_1", "r_at_2", "r_at_5", "r_at_10", "r_at_20", "r_at_30", \
         "r_at_50"))
-    #print (results_df.head())
 
     for index, classifier in enumerate([classifiers[x] for x in models_of_interest]):
         print (models_of_interest[index])
@@ -173,16 +155,7 @@ def classifier_loop(models_of_interest, classifiers, param_grid, X_train, X_test
 
                 row_index = len(results_df)
                 model_name = models_of_interest[index] + str(row_index)
-                ''''
-                print ("model", models_of_interest[index], "classifier", classifier,\
-                    "p", p, "train time", train_time, "test time", test_time, "accuracy", scores["accuracy"], \
-                    "f1", scores["f1_score"], "precision", scores["precision"], \
-                    "p_at_1", scores["p_at_1"], "p_at_2", scores["p_at_2"], "p_at_5", scores["p_at_5"],\
-                    "p_at_10", scores["p_at_10"], "p_at_20", scores["p_at_20"], "p_at_30", scores["p_at_30"], \
-                    "p_at_50", scores["p_at_50"], "r_at_1", scores["r_at_1"], "r_at_2", scores["r_at_2"], \
-                    "r_at_5", scores["r_at_5"], "r_at_10", scores["r_at_10"], "r_at_20", scores["r_at_20"], \
-                    "r_at_30", scores["r_at_30"], "r_at_50", scores["r_at_50"])
-                '''
+                
                 results_df.loc[row_index] = [models_of_interest[index], classifier,\
                     p, train_time, test_time, scores["accuracy"], \
                     scores["f1_score"], scores["precision"], \
